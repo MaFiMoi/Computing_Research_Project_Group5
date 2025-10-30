@@ -1,65 +1,44 @@
-<p align="center">
- <a href="https://web3templates.com/?ref=nextly_github_logo">
- <img src="https://user-images.githubusercontent.com/1884712/132941531-0fdd7acf-47ca-424e-b77f-1fab2e372a37.png" alt="W3T" width="100" height="41"/>
- </a> 
- <br>
- <br>
-</p>
+# 🛡️ ScamShield: Scam Lookup Service
 
-# Nextly - Landing Page Template with Next.js & Tailwind CSS
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Nextly is a free landing page & marketing website template for  startups and indie projects. Its built with Next.js & TailwindCSS.
-And its completely open-source.
- 
-![image](https://user-images.githubusercontent.com/1884712/121497169-03228680-c990-11eb-975a-e77fddc43de0.png)
+ScamShield is a web application designed to protect users from fraudulent activities. It provides a simple interface to look up phone numbers, email addresses, and websites to check if they have been reported or show signs of being associated with scams.
 
-## How to use
+This project was built as part of the Computing Research Project for Group 5.
 
-Click on the [Use Template](https://github.com/surjithctly/nextly-template/generate) button on this page to clone this respository to your github account. Or you can also clone this respository using terminal or bash. 
+## 📸 Screenshot
 
-### 1\. Clone this Repository
+![ScamShield Homepage](httpsimg/home.png)
+![ScamShield Lookup](httpsimg/lookup.png)
+
+## ✨ Features
+
+* **Comprehensive Lookup:** Check phone numbers, email addresses, and websites.
+* **Real-time Results:** Get immediate feedback on potential threats.
+* **User Reporting:** (Optional: Add this if you have the feature) Allow users to report new suspicious entities.
+* **Clean UI:** A modern, responsive user interface built with React and Tailwind CSS.
+* **Robust Backend:** Powered by Spring Boot for a scalable and efficient API.
+
+## 💻 Tech Stack
+
+* **Backend:** Spring Boot (Java)
+* **Frontend:** React & Tailwind CSS
+* **Database:** PostgreSQL
+* **Build Tool:** Maven (Backend) & Yarn/NPM (Frontend)
+
+## 🚀 Getting Started
+
+This project is a monorepo containing the Spring Boot backend (in the root) and the React frontend (in the `ScamShield` directory).
+
+### Prerequisites
+
+* **Java JDK 17+**: To run the Spring Boot backend.
+* **Maven**: To build the backend.
+* **Node.js (v16+)**: To run the React frontend.
+* **PostgreSQL**: A running instance of the database.
+
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/surjithctly/nextly-template.git
-```
-
-### 2\. Navigate to the directory
-
-```
-cd nextly-template
-```
-
-### 3\. Install dependencies
-
-```
-yarn install
-# or
-npm install
-```
-
-### 5\. Run Dev Server
-
-```
-yarn dev
-# or
-npm run dev
-```
-
-## Deploy with Vercel
-
-Deploy this template using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=next-example):
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/surjithctly/nextly-template&project-name=nextly-template&repository-name=nextly-template)
-
-
-## Author
-
-Surjith S M ( [@surjithctly](https://surjithctly.in/) )
-
----
-
-[![image](https://www.datocms-assets.com/31049/1618983297-powered-by-vercel.svg)](https://vercel.com/?utm_source=web3templates&utm_campaign=oss)
-
-
-
-
+git clone [https://github.com/MaFiMoi/Computing_Research_Project_Group5.git](https://github.com/MaFiMoi/Computing_Research_Project_Group5.git)
+cd Computing_Research_Project_Group5
