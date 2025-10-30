@@ -42,3 +42,4 @@ This project is a monorepo containing the Spring Boot backend (in the root) and 
 ```bash
 git clone [https://github.com/MaFiMoi/Computing_Research_Project_Group5.git](https://github.com/MaFiMoi/Computing_Research_Project_Group5.git)
 cd Computing_Research_Project_Group5
+ 
