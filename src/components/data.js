@@ -16,41 +16,41 @@ const benefitOne = {
   image: benefitOneImg,
   bullets: [
     {
-      title: "Understand your customers",
-      desc: "Then explain the first point breifly in one or two lines.",
+      title: "Protect yourself from scams",
+      desc: "Easily check if a phone number, email, or website is reported as a scam before you interact or share your personal information.",
       icon: <FaceSmileIcon />,
     },
     {
-      title: "Improve acquisition",
-      desc: "Here you can add the next benefit point.",
+      title: "Report and share suspicious activity",
+      desc: "Help protect the community by submitting scam reports. Your contribution builds a safer online space for everyone.",
       icon: <ChartBarSquareIcon />,
     },
     {
-      title: "Drive customer retention",
-      desc: "This will be your last bullet point in this section.",
+      title: "Stay updated with real-time data",
+      desc: "Access regularly updated scam databases powered by trusted APIs and community feedback.",
       icon: <CursorArrowRaysIcon />,
     },
   ],
 };
 
 const benefitTwo = {
-  title: "Offer more benefits here",
-  desc: "You can use this same layout with a flip image to highlight your rest of the benefits of your product. It can also contain an image or Illustration as above section along with some bullet points.",
+  title: "🔍 More reasons to use ScamShield",
+  desc: "ScamShield helps you protect yourself and others with reliable, community-driven information. Check how our system enhances your online safety 👇.",
   image: benefitTwoImg,
   bullets: [
     {
-      title: "Mobile Responsive Template",
-      desc: "Nextly is designed as a mobile first responsive template.",
+      title: "Real-time Scam Detection",
+      desc: "Our database updates constantly through trusted APIs and verified user reports, ensuring you get accurate scam insights instantly.",
       icon: <DevicePhoneMobileIcon />,
     },
     {
-      title: "Powered by Next.js & TailwindCSS",
-      desc: "This template is powered by latest technologies and tools.",
+      title: "Community-Powered Reports",
+      desc: "Join a growing network of users who share and flag suspicious activities building a safer digital environment together.",
       icon: <AdjustmentsHorizontalIcon />,
     },
     {
-      title: "Dark & Light Mode",
-      desc: "Nextly comes with a zero-config light & dark mode. ",
+      title: "Free & Privacy-Focused",
+      desc: "ScamShield is a completely non-profit service. We never collect or sell your personal data your safety comes first. ",
       icon: <SunIcon />,
     },
   ],
