@@ -36,21 +36,44 @@ export const Faq = () => {
 
 const faqdata = [
   {
-    question: "Is this template completely free to use?",
-    answer: "Yes, this template is completely free to use.",
-  },
-  {
-    question: "Can I use it in a commercial project?",
-    answer: "Yes, this you can.",
-  },
-  {
-    question: "What is your refund policy? ",
+    question: "Is this service completely free to use?",
     answer:
-      "If you're unhappy with your purchase for any reason, email us within 90 days and we'll refund you in full, no questions asked.",
+      "Yes! You can use and contribute to the platform without paying any fees.",
   },
   {
-    question: "Do you offer technical support? ",
+    question: "Can I use this platform for commercial purposes?",
     answer:
-      "No, we don't offer technical support for free downloads. Please purchase a support plan to get 6 months of support.",
+      "Absolutely! You can integrate our service into both personal and commercial projects as long as you comply with our terms of use.",
+  },
+  {
+    question: "What happens if I am not satisfied with the service?",
+    answer:
+      "If you experience any issues or believe the service does not meet your needs, feel free to contact us. We are always open to feedback and improvements.",
+  },
+  {
+    question: "Do you offer technical support?",
+    answer:
+      "Basic support is included for free users. However, you can upgrade to a premium plan to get 24/7 priority assistance and advanced features.",
+  },
+  {
+    question: "Can I customize or extend the features?",
+    answer:
+      "Definitely! Our platform is designed to be flexible, easy to integrate, and expandable with modern technology.",
+  },
+  {
+    question: "How do I check if a phone number is reported as a scam?",
+    answer:
+      "Simply type the phone number into our search tool. If the number has been reported by users, you will see warning details and the scam type.",
+  },
+  {
+    question: "Where do scam report statistics come from?",
+    answer:
+      "Statistics are collected from community submissions, validated reports, and trusted cybersecurity sources to ensure accuracy and reliability.",
+  },
+  {
+    question: "Is my personal information protected when I report a number?",
+    answer:
+      "Yes. Your identity is fully confidential. We do not share or expose personal data to any third party.",
   },
 ];
+
