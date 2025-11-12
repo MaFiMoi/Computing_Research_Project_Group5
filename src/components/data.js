@@ -11,8 +11,8 @@ import benefitOneImg from "../../public/img/benefit-one.png";
 import benefitTwoImg from "../../public/img/benefit-two.png";
 
 const benefitOne = {
-  title: "Highlight your benefi",
-  desc: "You can use this space to highlight your first benefit or a feature of your product. It can also contain an image or Illustration like in the example along with some bullet points.",
+  title: "Are you getting strange calls/texts?",
+  desc: "This is a free tool that helps you quickly look up suspicious phone numbers and websites. We aggregate data from the community and reputable sources to warn you about scam risks, helping you protect your information and assets.",
   image: benefitOneImg,
   bullets: [
     {

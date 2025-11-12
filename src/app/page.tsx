@@ -13,12 +13,11 @@ export default function Home() {
     <Container>
       <Hero />
       <SectionTitle
-        preTitle="Nextly Benefits"
-        title=" Why should you use this landing page"
+        preTitle="Benefits"
+        title=" Quick check, instant alert Content"
       >
-        Nextly is a free landing page & marketing website template for startups
-        and indie projects. Its built with Next.js & TailwindCSS. And its
-        completely open-source.
+        Just enter the phone number or paste the website link into the search box. 
+        Our system will analyze and compare it with the database and fraud reports and immediately warn if a risk is detected.
       </SectionTitle>
 
       <Benefits data={benefitOne} />

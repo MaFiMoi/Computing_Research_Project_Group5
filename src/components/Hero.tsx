@@ -55,7 +55,7 @@ export const Hero = () => {
               Tra cứu thông tin
             </h1>
             <p className="py-5 text-xl leading-normal text-gray-500 lg:text-xl xl:text-2xl dark:text-gray-300">
-              Nhập số điện thoại, email hoặc website để kiểm tra mức độ
+              Nhập số điện thoại, website để kiểm tra mức độ
               tin cậy và báo cáo lừa đảo.
             </p>
 
@@ -65,7 +65,7 @@ export const Hero = () => {
               className="flex flex-col w-full gap-3 sm:flex-row">
               <input
                 type="text"
-                placeholder="Nhập SĐT, email, hoặc website..."
+                placeholder="Nhập SĐT, hoặc website..."
                 className="flex-grow px-4 py-3 text-lg text-gray-700 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
                 // MỚI: Liên kết input với state
                 value={prompt}
