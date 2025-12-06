@@ -1,29 +1,64 @@
 "use client";
 
 import React, { useState } from "react";
-import { Container } from "./Container"; // ⭐ Import đúng với export bạn cung cấp
+import { Container } from "./Container";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ShieldCheck, AlertCircle } from "lucide-react";
 
+// ========================================
+// 🚀 Highlight helper
+// ========================================
+function highlight(text: string, keyword: string) {
+  if (!keyword) return text;
+
+  const regex = new RegExp(`(${keyword})`, "gi");
+  return text.split(regex).map((part, index) =>
+    regex.test(part) ? (
+      <span key={index} className="bg-yellow-300 dark:bg-yellow-600 px-1 rounded">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
 interface FAQItemProps {
+  index: number;
+  activeIndex: number | null;
+  onToggle: (idx: number) => void;
+
   question: string;
   answer: string;
   icon?: React.ReactNode;
+  search: string;
 }
-// PREMIUM FAQ ITEM WITH ANIMATION
-function FAQItem({ question, answer, icon }: FAQItemProps) {
-  const [open, setOpen] = useState(false);
+
+// =======================================================
+// FAQ ITEM
+// =======================================================
+function FAQItem({
+  index,
+  activeIndex,
+  onToggle,
+  question,
+  answer,
+  icon,
+  search,
+}: FAQItemProps) {
+  const open = activeIndex === index;
 
   return (
     <div className="mb-5 border rounded-xl shadow-sm bg-white dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
+
       {/* BUTTON */}
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => onToggle(index)}
         className="w-full flex items-center justify-between px-6 py-4 text-left text-lg text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-300"
       >
         <div className="flex items-center gap-3">
           {icon}
-          <span className="font-semibold">{question}</span>
+          <span className="font-semibold">{highlight(question, search)}</span>
         </div>
 
         <motion.div
@@ -44,7 +79,7 @@ function FAQItem({ question, answer, icon }: FAQItemProps) {
             transition={{ duration: 0.35 }}
             className="px-6 py-4 text-gray-600 dark:text-gray-300 border-t dark:border-gray-600"
           >
-            {answer}
+            {highlight(answer, search)}
           </motion.div>
         )}
       </AnimatePresence>
@@ -52,28 +87,61 @@ function FAQItem({ question, answer, icon }: FAQItemProps) {
   );
 }
 
-// ==================================================================
-// MAIN EXPORTED COMPONENT
-// ==================================================================
+// =======================================================
+// MAIN COMPONENT
+// =======================================================
 export const Faq = () => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+
+  const toggleFAQ = (idx: number) => {
+    setActiveIndex((prev) => (prev === idx ? null : idx));
+  };
+
+  // Filter FAQ by keyword
+  const filteredFAQ = faqdata.filter(
+    (item) =>
+      item.question.toLowerCase().includes(search.toLowerCase()) ||
+      item.answer.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <Container className="!p-0">
       <div className="w-full max-w-3xl mx-auto p-4">
 
         {/* TITLE */}
-        <h1 className="text-3xl font-bold text-center mb-10 text-gray-900 dark:text-gray-100">
+        <h1 className="text-3xl font-bold text-center mb-5 text-gray-900 dark:text-gray-100">
           Frequently Asked Questions
         </h1>
 
+        {/* SEARCH BAR */}
+        <input
+          type="text"
+          placeholder="Search questions..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full px-4 py-3 mb-8 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+        />
+
         {/* FAQ LOOP */}
-        {faqdata.map((item, index) => (
+        {filteredFAQ.map((item, index) => (
           <FAQItem
             key={index}
+            index={index}
+            activeIndex={activeIndex}
+            onToggle={toggleFAQ}
+            search={search}
             question={item.question}
             answer={item.answer}
             icon={item.icon}
           />
         ))}
+
+        {filteredFAQ.length === 0 && (
+          <p className="text-center text-gray-500 dark:text-gray-400 mt-6">
+            No results found.
+          </p>
+        )}
 
         {/* Divider */}
         <div className="border-t border-gray-300 dark:border-gray-600 my-14"></div>
@@ -115,46 +183,51 @@ export const Faq = () => {
   );
 };
 
-// ==================================================================
-// FAQ DATA
-// ==================================================================
+// =======================================================
+// FAQ DATA – SaaS Professional Edition
+// =======================================================
 const faqdata = [
   {
-    question: "Is this service completely free to use?",
-    answer: "Yes! You can use and contribute without paying any fees.",
+    question: "Is the platform free to use?",
+    answer:
+      "Yes. All core features are available at no cost. You can search data, submit reports, and access basic insights without any subscription.",
     icon: <ShieldCheck className="w-6 h-6 text-green-500" />,
   },
   {
-    question: "Can I use this platform for commercial purposes?",
-    answer: "Absolutely! You can integrate our service into any project.",
+    question: "Can I integrate this service into my applications?",
+    answer:
+      "Yes. Our system is designed for commercial and enterprise use. You’re free to integrate our APIs or data services into any product or workflow.",
     icon: <ShieldCheck className="w-6 h-6 text-blue-500" />,
   },
   {
-    question: "Do you offer technical support?",
-    answer: "Free users get basic support. Premium users get priority help.",
+    question: "Do you provide technical support?",
+    answer:
+      "We offer community support for all users. Premium plans include priority support and dedicated assistance.",
     icon: <AlertCircle className="w-6 h-6 text-yellow-500" />,
   },
   {
-    question: "How do I check if a phone number is a scam?",
-    answer: "Enter the number in our tool to see reports and scam data.",
+    question: "How can I verify if a phone number is a scam?",
+    answer:
+      "Enter the number in our search tool to see activity patterns, risk levels, and aggregated reports.",
     icon: <AlertCircle className="w-6 h-6 text-red-500" />,
   },
   {
-    question: "Where do scam statistics come from?",
+    question: "Where does your security data come from?",
     answer:
-      "From user submissions, verified reports, and trusted security providers.",
+      "Our database is updated from verified user submissions and global cybersecurity intelligence partners.",
     icon: <ShieldCheck className="w-6 h-6 text-indigo-500" />,
   },
   {
-    question: "Is my personal information protected when reporting?",
-    answer: "Yes. We never disclose or expose your personal data.",
+    question: "Is my personal information protected?",
+    answer:
+      "Absolutely. We follow strict data protection standards and never expose or share your private information.",
     icon: <ShieldCheck className="w-6 h-6 text-green-600" />,
   },
 ];
 
-// ==================================================================
+// =======================================================
 // GROUP MEMBERS
-// ==================================================================
+// =======================================================
 const partners = [
   { name: "Nguyễn Duy Hoàng - BH01754" },
   { name: "Kim Tiến Đạt - BH01783" },
