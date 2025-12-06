@@ -1,5 +1,5 @@
 import { Container } from "@/components/Container";
-import { Faq } from "@/components/Faq";
+import { Faq } from "@/components/FaqItem";
 import { SectionTitle } from "@/components/SectionTitle";
 
 export default function FAQPage() {
