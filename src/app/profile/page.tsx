@@ -12,27 +12,40 @@ export default function ProfilePage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'info' | 'password' | 'security'>('info');
 
-  // === State cho Form 1: Thông tin cá nhân ===
+  // === State: Thông tin cá nhân ===
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [profileMessage, setProfileMessage] = useState("");
   const [profileError, setProfileError] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  // === State cho Form 2: Mật khẩu ===
-  const [oldPassword, setOldPassword] = useState(""); // THÊM MỚI
+  // === State: Mật khẩu ===
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
-  // 1. Tải dữ liệu người dùng khi component được mount
+  // === State: Bảo mật (MFA) ===
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [isEnrollingMFA, setIsEnrollingMFA] = useState(false);
+  const [qrCode, setQrCode] = useState(""); // URL ảnh QR
+  const [mfaSecret, setMfaSecret] = useState(""); // Mã text để nhập tay
+  const [verifyCode, setVerifyCode] = useState(""); // Mã 6 số user nhập
+  const [securityMessage, setSecurityMessage] = useState("");
+  const [securityError, setSecurityError] = useState("");
+  const [showMFASetup, setShowMFASetup] = useState(false);
+  const [factorIdToVerify, setFactorIdToVerify] = useState(""); // Lưu ID factor đang chờ verify
+
+  // 1. Tải dữ liệu
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
-      
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
@@ -43,39 +56,38 @@ export default function ProfilePage() {
       setUser(user);
       setEmail(user.email || "");
 
-      try {
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", user.id)
-          .single(); 
+      // Lấy Profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
 
-        if (error && error.code !== "PGRST116") {
-          console.error("Lỗi tải hồ sơ:", error);
-          setProfileError("Không thể tải thông tin hồ sơ.");
-        }
+      if (profile) setFullName(profile.full_name || "");
 
-        if (profile) {
-          setFullName(profile.full_name || "");
-        }
-      } catch (e) {
-        console.error(e);
-        setProfileError("Đã xảy ra lỗi khi tải dữ liệu.");
+      // Kiểm tra MFA status
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      if (factors?.totp?.some(f => f.status === 'verified')) {
+        setMfaEnabled(true);
       }
-
+      
       setLoading(false);
     };
 
     fetchUserData();
   }, [supabase, router]);
 
-  // 2. Xử lý Cập nhật Thông tin Hồ sơ (Form 1)
+  // === LOGIC TỰ ĐỘNG SUBMIT KHI NHẬP ĐỦ 6 SỐ MFA ===
+  useEffect(() => {
+    if (showMFASetup && verifyCode.length === 6) {
+      handleVerifyMFA();
+    }
+  }, [verifyCode]);
+
+  // 2. Update Profile
   const handleProfileUpdate = async (e: FormEvent) => {
     e.preventDefault();
-    setProfileMessage("");
-    setProfileError("");
-    setIsSavingProfile(true);
-
+    setProfileMessage(""); setProfileError(""); setIsSavingProfile(true);
     if (!user) return;
 
     const { error } = await supabase
@@ -83,235 +95,310 @@ export default function ProfilePage() {
       .update({ full_name: fullName })
       .eq("id", user.id);
 
-    if (error) {
-      setProfileError(`Lỗi cập nhật: ${error.message}`);
-    } else {
-      setProfileMessage("Cập nhật thông tin thành công!");
-    }
+    if (error) setProfileError(error.message);
+    else setProfileMessage("Cập nhật thành công!");
+    
     setIsSavingProfile(false);
   };
 
-  // 3. Xử lý Cập nhật Mật khẩu (Form 2) - ĐÃ CẬP NHẬT
+  // 3. Password Reset Logic
+  const handleSendOtp = async () => {
+    setPasswordMessage(""); setPasswordError(""); setIsSendingOtp(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: '' });
+    setIsSendingOtp(false);
+    if (error) setPasswordError(error.message);
+    else {
+      setPasswordMessage("Đã gửi OTP vào email.");
+      setOtpSent(true);
+    }
+  };
+
   const handlePasswordUpdate = async (e: FormEvent) => {
     e.preventDefault();
-    setPasswordMessage("");
-    setPasswordError("");
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Mật khẩu mới không khớp.");
-      return;
-    }
-    if (newPassword.length < 6) {
-      setPasswordError("Mật khẩu mới phải có ít nhất 6 ký tự.");
-      return;
-    }
-    if (!oldPassword) {
-      setPasswordError("Vui lòng nhập mật khẩu cũ.");
-      return;
-    }
-
+    setPasswordMessage(""); setPasswordError("");
+    if (newPassword !== confirmPassword) return setPasswordError("Mật khẩu không khớp.");
+    
     setIsSavingPassword(true);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email, token: otp, type: 'recovery',
+    });
 
-    // Bước 1: Kiểm tra mật khẩu cũ có đúng không
-    // Chúng ta làm điều này bằng cách thử "đăng nhập lại"
-    if (!user || !user.email) {
-      setPasswordError("Không tìm thấy thông tin người dùng.");
+    if (verifyError) {
+      setPasswordError("OTP sai hoặc hết hạn.");
       setIsSavingPassword(false);
       return;
     }
 
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: oldPassword,
-    });
-
-    if (reauthError) {
-      setPasswordError("Mật khẩu cũ không đúng.");
-      setIsSavingPassword(false);
-      return;
-    }
-
-    // Bước 2: Nếu mật khẩu cũ đúng, tiến hành cập nhật mật khẩu mới
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (updateError) {
-      setPasswordError(`Lỗi cập nhật mật khẩu: ${updateError.message}`);
-    } else {
-      setPasswordMessage("Cập nhật mật khẩu thành công!");
-      // Xóa tất cả trường mật khẩu sau khi thành công
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    if (updateError) setPasswordError(updateError.message);
+    else {
+      setPasswordMessage("Đổi mật khẩu thành công!");
+      setOtpSent(false); setOtp(""); setNewPassword(""); setConfirmPassword("");
     }
     setIsSavingPassword(false);
   };
 
-  // 4. HÀM MỚI: Xử lý Quên mật khẩu
-  const handleForgotPassword = async () => {
-    setPasswordMessage("");
-    setPasswordError("");
+  // 4. === LOGIC MFA (QUAN TRỌNG) ===
 
-    if (!email) {
-      setPasswordError("Không tìm thấy email người dùng.");
-      return;
-    }
+  const handleEnableMFA = async () => {
+    setSecurityMessage(""); setSecurityError(""); setIsEnrollingMFA(true);
 
-    setPasswordMessage("Đang gửi email khôi phục...");
-    
-    // Yêu cầu Supabase gửi link/OTP khôi phục
-    // (Cần cấu hình template "Reset password" trong Supabase)
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`, // Trang bạn muốn họ đến
-    });
+    try {
+      // Dọn dẹp: Xóa các factor "rác" (chưa verified) trước khi tạo mới
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      if (factors?.totp) {
+        for (const f of factors.totp) {
+          if ((f.status as string) === 'unverified') {
+            await supabase.auth.mfa.unenroll({ factorId: f.id });
+          }
+        }
+      }
 
-    if (error) {
-      setPasswordError(error.message);
-    } else {
-      setPasswordMessage("Đã gửi email khôi phục. Vui lòng kiểm tra hộp thư.");
+      // Tạo factor mới
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: 'Authenticator App' // Tên hiển thị trong app Google Auth
+      });
+
+      if (error) throw error;
+
+      // Lưu thông tin để hiển thị và verify
+      setFactorIdToVerify(data.id);
+      setQrCode(data.totp.qr_code); // Supabase trả về Data URI (SVG)
+      setMfaSecret(data.totp.secret);
+      setShowMFASetup(true);
+
+    } catch (e: any) {
+      setSecurityError(e.message || "Lỗi tạo MFA");
+    } finally {
+      setIsEnrollingMFA(false);
     }
   };
 
+  const handleVerifyMFA = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    setSecurityMessage(""); setSecurityError("");
 
-  // Hiển thị trạng thái tải
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 text-white">
-        Đang tải thông tin...
-      </div>
-    );
-  }
+    try {
+      // 1. Tạo challenge
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: factorIdToVerify
+      });
+      if (challengeError) throw challengeError;
 
-  // Giao diện chính
+      // 2. Verify mã user nhập
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: factorIdToVerify,
+        challengeId: challengeData.id,
+        code: verifyCode
+      });
+
+      if (verifyError) {
+        setSecurityError("Mã không đúng. Vui lòng thử lại.");
+        setVerifyCode(""); // Xóa để nhập lại
+      } else {
+        setSecurityMessage("Đã kích hoạt xác thực 2 yếu tố!");
+        setMfaEnabled(true);
+        setShowMFASetup(false);
+        // Reset state rác
+        setVerifyCode(""); setQrCode(""); setMfaSecret(""); setFactorIdToVerify("");
+      }
+    } catch (e: any) {
+      setSecurityError(e.message || "Lỗi xác thực MFA");
+    }
+  };
+
+  const handleDisableMFA = async () => {
+    if (!confirm("Bạn chắc chắn muốn tắt 2FA? Tài khoản sẽ kém bảo mật hơn.")) return;
+    
+    try {
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      if (factors?.totp) {
+        // Xóa hết các factors
+        await Promise.all(factors.totp.map(f => supabase.auth.mfa.unenroll({ factorId: f.id })));
+        setMfaEnabled(false);
+        setSecurityMessage("Đã tắt xác thực 2 yếu tố.");
+      }
+    } catch (e: any) {
+      setSecurityError("Lỗi khi tắt MFA.");
+    }
+  };
+
+  // Helper: Copy mã secret
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(mfaSecret);
+    alert("Đã sao chép mã bí mật!");
+  };
+
+  if (loading) return <div className="min-h-screen flex justify-center items-center">Đang tải...</div>;
+
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 py-12">
-      <div className="w-full max-w-lg p-8 space-y-8">
+      <div className="w-full max-w-2xl p-8">
         
-        {/* --- Card 1: Thông tin tài khoản --- */}
-        <div className="bg-white rounded-lg shadow-md dark:bg-gray-800 p-8">
-          {/* ... (Form 1 không thay đổi) ... */}
-          <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-6">
-            Thông tin tài khoản
-          </h1>
-          
-          {profileMessage && <p className="text-center text-green-500 mb-4">{profileMessage}</p>}
-          {profileError && <p className="text-center text-red-500 mb-4">{profileError}</p>}
+        {/* Header Tabs */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+           <div className="flex border-b dark:border-gray-700">
+            {['info', 'password', 'security'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab as any)}
+                className={`flex-1 py-4 font-medium transition-colors ${
+                  activeTab === tab 
+                    ? 'bg-indigo-50 text-indigo-600 border-b-2 border-indigo-600 dark:bg-gray-700 dark:text-indigo-400' 
+                    : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700'
+                }`}
+              >
+                {tab === 'info' ? 'Thông tin' : tab === 'password' ? 'Mật khẩu' : 'Bảo mật (2FA)'}
+              </button>
+            ))}
+          </div>
 
-          <form className="space-y-6" onSubmit={handleProfileUpdate}>
-            <div>
-              <label 
-                htmlFor="email" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email
-              </label>
-              <input
-                type="email" id="email" name="email"
-                value={email}
-                disabled
-                className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label 
-                htmlFor="fullName" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Họ và tên
-              </label>
-              <input
-                type="text" id="fullName" name="fullName" required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSavingProfile}
-              className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">
-              {isSavingProfile ? "Đang lưu..." : "Cập nhật thông tin"}
-            </button>
-          </form>
-        </div>
-
-        {/* --- Card 2: Đổi mật khẩu --- (ĐÃ CẬP NHẬT) */}
-        <div className="bg-white rounded-lg shadow-md dark:bg-gray-800 p-8">
-          <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-6">
-            Thay đổi mật khẩu
-          </h1>
-
-          {passwordMessage && <p className="text-center text-green-500 mb-4">{passwordMessage}</p>}
-          {passwordError && <p className="text-center text-red-500 mb-4">{passwordError}</p>}
-
-          <form className="space-y-6" onSubmit={handlePasswordUpdate}>
-            {/* THÊM MỚI: Mật khẩu cũ */}
-            <div>
-              <div className="flex justify-between items-center">
-                <label 
-                  htmlFor="oldPassword" 
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Mật khẩu cũ
-                </label>
-                {/* THÊM MỚI: Nút Quên mật khẩu */}
-                <button 
-                  type="button" 
-                  onClick={handleForgotPassword}
-                  className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400">
-                  Quên mật khẩu?
+          <div className="p-8">
+            {/* === TAB 1: INFO === */}
+            {activeTab === 'info' && (
+              <form onSubmit={handleProfileUpdate} className="space-y-6">
+                {profileMessage && <p className="text-green-600 text-center">{profileMessage}</p>}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                  <input value={email} disabled className="mt-1 block w-full px-3 py-2 bg-gray-100 border rounded-md dark:bg-gray-600 dark:text-gray-300" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Họ tên</label>
+                  <input 
+                    value={fullName} 
+                    onChange={e => setFullName(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white focus:ring-indigo-500 focus:border-indigo-500" 
+                  />
+                </div>
+                <button disabled={isSavingProfile} className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400">
+                  {isSavingProfile ? "Đang lưu..." : "Cập nhật hồ sơ"}
                 </button>
+              </form>
+            )}
+
+            {/* === TAB 2: PASSWORD === */}
+            {activeTab === 'password' && (
+              <form onSubmit={handlePasswordUpdate} className="space-y-6">
+                {passwordMessage && <p className="text-green-600 text-center">{passwordMessage}</p>}
+                {passwordError && <p className="text-red-600 text-center">{passwordError}</p>}
+                
+                {!otpSent ? (
+                  <button type="button" onClick={handleSendOtp} disabled={isSendingOtp} className="w-full py-2 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                    {isSendingOtp ? "Đang gửi..." : "Gửi mã OTP để đổi mật khẩu"}
+                  </button>
+                ) : (
+                  <>
+                    <input 
+                      placeholder="Nhập mã OTP từ email"
+                      value={otp} onChange={e => setOtp(e.target.value)}
+                      className="block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white"
+                    />
+                    <input 
+                      type="password" placeholder="Mật khẩu mới"
+                      value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                      className="block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white"
+                    />
+                    <input 
+                      type="password" placeholder="Xác nhận mật khẩu"
+                      value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                      className="block w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white"
+                    />
+                    <button disabled={isSavingPassword} className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md">
+                      {isSavingPassword ? "Đang xử lý..." : "Đổi mật khẩu"}
+                    </button>
+                  </>
+                )}
+              </form>
+            )}
+
+            {/* === TAB 3: SECURITY (MFA) === */}
+            {activeTab === 'security' && (
+              <div>
+                <div className="flex items-center justify-between mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Trạng thái 2FA</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{mfaEnabled ? "Tài khoản của bạn đang được bảo vệ." : "Chưa kích hoạt."}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${mfaEnabled ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    {mfaEnabled ? 'Đã bật' : 'Chưa bật'}
+                  </span>
+                </div>
+
+                {securityError && <p className="mb-4 text-red-600 text-center bg-red-50 p-2 rounded">{securityError}</p>}
+                {securityMessage && <p className="mb-4 text-green-600 text-center bg-green-50 p-2 rounded">{securityMessage}</p>}
+
+                {!mfaEnabled && !showMFASetup && (
+                  <button onClick={handleEnableMFA} disabled={isEnrollingMFA} className="w-full py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium shadow-sm">
+                    {isEnrollingMFA ? "Đang khởi tạo..." : "Kích hoạt Google Authenticator"}
+                  </button>
+                )}
+
+                {showMFASetup && (
+                  <div className="bg-white border border-gray-200 dark:bg-gray-700 dark:border-gray-600 rounded-lg p-6 space-y-6">
+                    <div className="text-center">
+                      <h4 className="font-medium text-lg mb-2 text-gray-900 dark:text-white">1. Quét mã QR</h4>
+                      <p className="text-sm text-gray-500 mb-4">Mở ứng dụng Google Authenticator và quét mã này:</p>
+                      
+                      {/* Hiển thị QR Code */}
+                      {qrCode && (
+                        <div className="inline-block p-2 bg-white rounded-lg border shadow-sm">
+                          <img src={qrCode} alt="QR Code" className="w-48 h-48 object-contain" />
+                        </div>
+                      )}
+                      
+                      {/* Hiển thị mã Text nếu không quét được */}
+                      <div className="mt-4">
+                        <p className="text-xs text-gray-500 mb-1">Không quét được? Nhập mã này:</p>
+                        <div className="flex items-center justify-center space-x-2">
+                          <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono select-all">
+                            {mfaSecret}
+                          </code>
+                          <button onClick={copyToClipboard} type="button" className="text-xs text-indigo-600 hover:underline">
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-6 dark:border-gray-600">
+                      <h4 className="font-medium text-lg mb-2 text-center text-gray-900 dark:text-white">2. Nhập mã xác nhận</h4>
+                      <p className="text-sm text-gray-500 mb-4 text-center">Nhập mã 6 số từ ứng dụng để hoàn tất.</p>
+                      
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={verifyCode}
+                        onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="000 000"
+                        className="block w-full text-center text-2xl tracking-[0.5em] font-mono py-2 border-b-2 border-gray-300 focus:border-indigo-600 outline-none bg-transparent dark:text-white dark:border-gray-500 transition-colors"
+                      />
+                      
+                      <div className="mt-6 flex space-x-3">
+                         <button 
+                          onClick={() => { setShowMFASetup(false); setVerifyCode(""); }}
+                          className="flex-1 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md dark:bg-gray-600 dark:text-white"
+                        >
+                          Hủy bỏ
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {mfaEnabled && (
+                  <button onClick={handleDisableMFA} className="w-full py-2 bg-red-50 text-red-600 border border-red-200 rounded-md hover:bg-red-100">
+                    Tắt xác thực 2 yếu tố
+                  </button>
+                )}
               </div>
-              <input
-                type="password" id="oldPassword" name="oldPassword" required
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label 
-                htmlFor="newPassword" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Mật khẩu mới
-              </label>
-              <input
-                type="password" id="newPassword" name="newPassword" required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            
-            <div>
-              <label 
-                htmlFor="confirmPassword" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Xác nhận mật khẩu mới
-              </label>
-              <input
-                type="password" id="confirmPassword" name="confirmPassword" required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSavingPassword}
-              className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400">
-              {isSavingPassword ? "Đang lưu..." : "Thay đổi mật khẩu"}
-            </button>
-          </form>
+            )}
+          </div>
         </div>
-
-        <p className="text-sm text-center text-gray-600 dark:text-gray-400">
-          <Link href="/" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
-            Quay về trang chủ
-          </Link>
-        </p>
+        
+        <div className="text-center mt-6">
+           <Link href="/" className="text-indigo-600 hover:underline text-sm">← Quay lại trang chủ</Link>
+        </div>
       </div>
     </div>
   );

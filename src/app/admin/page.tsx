@@ -1,92 +1,85 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+// 1. Import thêm useCallback
+import React, { useState, useEffect, useCallback } from "react";
 import Card from "./components/Card";
 import Table from "./components/Table";
 import { SimpleBarChart, SimplePieChart } from "./components/Charts";
-import { Phone, AlertTriangle, Users, Activity, TrendingUp, Clock ,FileText, Globe } from "lucide-react";
+import { Phone, AlertTriangle, Users, Activity, TrendingUp, Clock, FileText, CheckSquare, ShieldCheck } from "lucide-react";
+// 2. Import Supabase client
+import { createClient } from "@/lib/supabaseClient"; 
 
 export default function AdminDashboard() {
+  // 3. Khởi tạo client
+  const supabase = createClient();
+  
+  // 4. Khởi tạo State cho tất cả dữ liệu động
   const [stats, setStats] = useState<any>(null);
-  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
+  const [phoneReports, setPhoneReports] = useState<any[]>([]);
   const [dailyStats, setDailyStats] = useState<any[]>([]);
+  const [pieData, setPieData] = useState<any[]>([]); // State cho PieChart
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  // 5. SỬA LỖI (VÀNG): Bọc fetchData bằng useCallback
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      // Fetch thống kê tổng quan
-      const statsRes = await fetch('/api/admin/stats');
-      const statsData = await statsRes.json();
-      
-      if (statsData.success) {
-        setStats(statsData.data.overview);
-        setDailyStats(statsData.data.daily);
-      }
+      // Gọi cả 4 hàm cùng lúc để tăng tốc
+      let [statsRes, dailyRes, reportsRes, pieRes] = await Promise.all([
+        supabase.rpc("get_admin_dashboard_stats").single(),
+        supabase.rpc("get_daily_stats_chart"),
+        supabase.rpc("get_recent_reports"),
+        supabase.rpc("get_report_type_distribution")
+      ]);
 
-      // Fetch danh sách số điện thoại gần đây
-      const phonesRes = await fetch('/api/admin/phone-numbers?limit=10');
-      const phonesData = await phonesRes.json();
-      
-      if (phonesData.success) {
-        setPhoneNumbers(phonesData.data);
-      }
+      if (statsRes.data) setStats(statsRes.data);
+      if (statsRes.error) throw statsRes.error;
 
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+      if (dailyRes.data) setDailyStats(dailyRes.data);
+      if (dailyRes.error) throw dailyRes.error;
+
+      if (reportsRes.data) setPhoneReports(reportsRes.data);
+      if (reportsRes.error) throw reportsRes.error;
+      
+      if (pieRes.data) setPieData(pieRes.data);
+      if (pieRes.error) throw pieRes.error;
+
+    } catch (error: any) {
+      console.error('Error fetching data:', error.message);
+    } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]); // Thêm 'supabase' làm phụ thuộc
 
-  // Dữ liệu cho biểu đồ
-  const chartData = [
-    { day: 'T2', checks: 420, scams: 89 },
-    { day: 'T3', checks: 380, scams: 76 },
-    { day: 'T4', checks: 510, scams: 102 },
-    { day: 'T5', checks: 440, scams: 88 },
-    { day: 'T6', checks: 590, scams: 118 },
-    { day: 'T7', checks: 680, scams: 136 },
-    { day: 'CN', checks: 720, scams: 144 }
-  ];
+  // 6. Cập nhật useEffect
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]); // Thêm 'fetchData' vào mảng phụ thuộc
 
-  const pieData = [
-    { name: 'Critical', value: 35 },
-    { name: 'High', value: 25 },
-    { name: 'Medium', value: 20 },
-    { name: 'Low', value: 15 },
-    { name: 'Safe', value: 5 }
-  ];
-
-  // Columns cho bảng
+  // 7. Cập nhật Columns (cột) cho bảng
   const columns = [
     { 
-      key: 'phone_number', 
-      label: 'Số điện thoại',
+      key: 'report_value', 
+      label: 'Đối tượng Báo cáo',
       render: (value: string) => (
         <span className="font-mono font-medium">{value}</span>
       )
     },
     { 
-      key: 'total_reports', 
-      label: 'Số báo cáo',
-      render: (value: number) => (
-        <span className="font-semibold">{value}</span>
+      key: 'report_type', 
+      label: 'Loại hình',
+      render: (value: string) => (
+        <span className="font-semibold">{value || 'N/A'}</span>
       )
     },
     {
-      key: 'risk_level',
-      label: 'Mức độ rủi ro',
+      key: 'status',
+      label: 'Trạng thái',
       render: (value: string) => {
         const colorMap: any = {
-          critical: 'bg-red-100 text-red-700 border-red-200',
-          high: 'bg-orange-100 text-orange-700 border-orange-200',
-          medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-          low: 'bg-blue-100 text-blue-700 border-blue-200',
-          safe: 'bg-green-100 text-green-700 border-green-200'
+          pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+          confirmed: 'bg-green-100 text-green-700 border-green-200',
+          rejected: 'bg-red-100 text-red-700 border-red-200',
         };
         return (
           <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${colorMap[value] || 'bg-gray-100 text-gray-700'}`}>
@@ -96,23 +89,12 @@ export default function AdminDashboard() {
       }
     },
     {
-      key: 'is_scam',
-      label: 'Trạng thái',
-      render: (value: boolean) => (
-        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-          value 
-            ? 'bg-red-100 text-red-700 border-red-200' 
-            : 'bg-green-100 text-green-700 border-green-200'
-        }`}>
-          {value ? 'LỪA ĐẢO' : 'AN TOÀN'}
+      key: 'created_at',
+      label: 'Ngày báo cáo',
+      render: (value: string) => (
+        <span className="text-gray-600">
+          {new Date(value).toLocaleString('vi-VN')}
         </span>
-      )
-    },
-    {
-      key: 'check_count',
-      label: 'Lượt check',
-      render: (value: number) => (
-        <span className="text-gray-600">{value || 0}</span>
       )
     }
   ];
@@ -128,6 +110,7 @@ export default function AdminDashboard() {
     );
   }
 
+  // 8. Cập nhật JSX với dữ liệu động
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -151,72 +134,68 @@ export default function AdminDashboard() {
       </div>
 
       <div className="p-8">
-        {/* Stats Cards */}
+        {/* Stats Cards - Cập nhật theo SQL mới */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card
             title="Tổng số check"
             value={stats?.total_checks || 0}
             icon={<Phone className="text-blue-600" size={28} />}
-            trend="12% so với tuần trước"
-            trendUp={true}
+            trend=""
           />
           <Card
-            title="Số lừa đảo"
-            value={stats?.total_scam_numbers || 0}
-            icon={<AlertTriangle className="text-red-600" size={28} />}
-            trend="8% so với tuần trước"
-            trendUp={false}
+            title="Lừa đảo đã xác nhận"
+            value={stats?.confirmed_scams || 0}
+            icon={<ShieldCheck className="text-red-600" size={28} />}
+            trend=""
           />
           <Card
-            title="Người dùng hoạt động"
+            title="User hoạt động (7 ngày)"
             value={stats?.active_users_week || 0}
             icon={<Users className="text-green-600" size={28} />}
-            trend="5% so với tuần trước"
-            trendUp={true}
+            trend=""
           />
           <Card
             title="Check hôm nay"
             value={stats?.checks_today || 0}
             icon={<TrendingUp className="text-purple-600" size={28} />}
-            trend="20% so với hôm qua"
-            trendUp={true}
+            trend=""
           />
         </div>
 
-        {/* Charts */}
+        {/* Charts - Cập nhật dùng data động */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">Lượt check theo tuần</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Hoạt động 7 ngày qua</h3>
             <SimpleBarChart 
-              data={chartData}
-              dataKey1="checks"
-              dataKey2="scams"
-              label1="Tổng check"
-              label2="Phát hiện lừa đảo"
+              data={dailyStats} // Dùng data động
+              dataKey1="total_checks"
+              dataKey2="total_reports"
+              label1="Lượt Check"
+              label2="Báo Cáo Mới"
             />
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">Phân bố mức độ rủi ro</h3>
-            <SimplePieChart data={pieData} />
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Phân bố loại hình báo cáo</h3>
+            <SimplePieChart data={pieData} /> {/* Dùng data động */}
           </div>
         </div>
 
         {/* Recent Phone Numbers Table */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Số điện thoại được check gần đây</h2>
+            <h2 className="text-xl font-semibold text-gray-800">Báo cáo gần đây</h2>
             <a 
-              href="/admin/phone-numbers" 
+              href="/admin/reports" 
               className="text-blue-600 hover:text-blue-700 font-medium text-sm"
             >
               Xem tất cả →
             </a>
           </div>
-          <Table columns={columns} data={phoneNumbers} loading={false} />
+          <Table columns={columns} data={phoneReports} loading={loading} />
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Cập nhật dùng data động */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <a 
             href="/admin/reports" 
@@ -228,37 +207,37 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-gray-600 text-sm">Báo cáo chờ xử lý</p>
-                <p className="text-2xl font-bold text-gray-800">12</p>
+                <p className="text-2xl font-bold text-gray-800">{stats?.pending_reports || 0}</p>
               </div>
             </div>
           </a>
 
           <a 
-            href="/admin/ai-logs" 
+            href="/admin/users" 
             className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition"
           >
             <div className="flex items-center space-x-4">
               <div className="bg-purple-100 p-3 rounded-lg">
-                <Activity className="text-purple-600" size={24} />
+                <Users className="text-purple-600" size={24} />
               </div>
               <div>
-                <p className="text-gray-600 text-sm">AI crawl hôm nay</p>
-                <p className="text-2xl font-bold text-gray-800">8</p>
+                <p className="text-gray-600 text-sm">Users hoạt động</p>
+                <p className="text-2xl font-bold text-gray-800">{stats?.active_users_week || 0}</p>
               </div>
             </div>
           </a>
 
           <a 
-            href="/admin/web-sources" 
+            href="/admin/reports?status=confirmed" 
             className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition"
           >
             <div className="flex items-center space-x-4">
               <div className="bg-green-100 p-3 rounded-lg">
-                <Globe className="text-green-600" size={24} />
+                <ShieldCheck className="text-green-600" size={24} />
               </div>
               <div>
-                <p className="text-gray-600 text-sm">Nguồn đang hoạt động</p>
-                <p className="text-2xl font-bold text-gray-800">5/12</p>
+                <p className="text-gray-600 text-sm">Lừa đảo đã xác nhận</p>
+                <p className="text-2xl font-bold text-gray-800">{stats?.confirmed_scams || 0}</p>
               </div>
             </div>
           </a>

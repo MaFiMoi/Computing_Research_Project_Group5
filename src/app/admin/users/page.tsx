@@ -1,38 +1,75 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+// 1. Import thêm 'useCallback' và 'useMemo'
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Table from "../components/Table";
 import { Users as UsersIcon, UserCheck, UserX, TrendingUp } from "lucide-react";
+// 2. Import Supabase client
+import { createClient } from "@/lib/supabaseClient";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  // 3. Khởi tạo Supabase client
+  const supabase = createClient();
 
-  const fetchUsers = async () => {
+  // 4. SỬA LỖI (VÀNG): Bọc 'fetchUsers' bằng 'useCallback'
+  const fetchUsers = useCallback(async () => {
+    setLoading(true); // Chuyển setLoading lên đầu
     try {
-      const res = await fetch('/api/admin/users');
-      const data = await res.json();
-      
-      if (data.success) {
-        setUsers(data.data);
+      // Gọi hàm RPC đã tạo
+      const { data, error } = await supabase.rpc("get_admin_user_list");
+
+      if (error) {
+        throw new Error(error.message);
       }
+
+      if (data) {
+        setUsers(data);
+      }
+
       setLoading(false);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (error: any) {
+      console.error('Error fetching users:', error.message);
       setLoading(false);
     }
-  };
+  }, [supabase]); // Thêm 'supabase' làm phụ thuộc
+
+  // 5. Cập nhật useEffect
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]); // Thêm 'fetchUsers' vào mảng phụ thuộc
+
+  // 6. TỐI ƯU: Tính toán các chỉ số thống kê bằng useMemo
+  const stats = useMemo(() => {
+    if (loading || users.length === 0) {
+      return {
+        total: 0,
+        active: 0,
+        suspended: 0,
+        avgChecks: 0
+      };
+    }
+
+    const total = users.length;
+    const active = users.filter(u => u.is_active).length;
+    const suspended = total - active;
+    const totalChecks = users.reduce((sum, u) => sum + (u.total_checks || 0), 0);
+    const avgChecks = total > 0 ? Math.round(totalChecks / total) : 0;
+
+    return { total, active, suspended, avgChecks };
+  }, [users, loading]); // Phụ thuộc vào 'users' và 'loading'
+
 
   const columns = [
     {
       key: 'id',
-      label: 'ID',
-      render: (value: number) => (
-        <span className="font-mono text-gray-600">#{value}</span>
+      label: 'ID Người dùng',
+      render: (value: string) => (
+        <span className="font-mono text-xs text-gray-500">
+          {value.substring(0, 8)}...
+        </span>
       )
     },
     {
@@ -40,7 +77,7 @@ export default function UsersPage() {
       label: 'Tên',
       render: (value: string, row: any) => (
         <div>
-          <p className="font-medium text-gray-800">{value}</p>
+          <p className="font-medium text-gray-800">{value || '(Chưa có tên)'}</p>
           <p className="text-sm text-gray-500">{row.email}</p>
         </div>
       )
@@ -92,6 +129,7 @@ export default function UsersPage() {
     }
   ];
 
+  // Phần JSX đã sửa lỗi
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -108,19 +146,22 @@ export default function UsersPage() {
       <div className="p-8">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {/* Card: Tổng người dùng */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center space-x-3">
               <div className="bg-blue-100 p-3 rounded-lg">
                 <UsersIcon className="text-blue-600" size={24} />
               </div>
               <div>
-                <p className="text-gray-500 text-sm"></p>
-                    <p className="text-gray-500 text-sm">Tổng người dùng</p>
-                <p className="text-2xl font-bold text-gray-800">{users.length}</p>
+                <p className="text-gray-500 text-sm">Tổng người dùng</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {loading ? '...' : stats.total}
+                </p>
               </div>
             </div>
           </div>
 
+          {/* Card: Đang hoạt động */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center space-x-3">
               <div className="bg-green-100 p-3 rounded-lg">
@@ -129,12 +170,13 @@ export default function UsersPage() {
               <div>
                 <p className="text-gray-500 text-sm">Đang hoạt động</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {users.filter(u => u.is_active).length}
+                  {loading ? '...' : stats.active}
                 </p>
               </div>
             </div>
           </div>
 
+          {/* Card: Tạm khóa */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center space-x-3">
               <div className="bg-red-100 p-3 rounded-lg">
@@ -143,12 +185,13 @@ export default function UsersPage() {
               <div>
                 <p className="text-gray-500 text-sm">Tạm khóa</p>
                 <p className="text-2xl font-bold text-red-600">
-                  {users.filter(u => !u.is_active).length}
+                  {loading ? '...' : stats.suspended}
                 </p>
               </div>
             </div>
           </div>
 
+          {/* Card: Trung bình check */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center space-x-3">
               <div className="bg-purple-100 p-3 rounded-lg">
@@ -157,9 +200,7 @@ export default function UsersPage() {
               <div>
                 <p className="text-gray-500 text-sm">Trung bình check</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {users.length > 0 
-                    ? Math.round(users.reduce((sum, u) => sum + (u.total_checks || 0), 0) / users.length)
-                    : 0}
+                  {loading ? '...' : stats.avgChecks}
                 </p>
               </div>
             </div>
