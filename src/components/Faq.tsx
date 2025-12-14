@@ -1,24 +1,8 @@
-"use client"; // <<< BẮT BUỘC GIỮ ĐÚNG DÒNG 1
+"use client";
 
 import React, { useEffect, useState } from "react";
-
-// BẮT BUỘC: Tất cả thư viện UI phải load trong Client Component
 import dynamic from "next/dynamic";
-
-// Load Recharts dưới dạng dynamic để tránh build trên server
-const BarChart = dynamic(() => import("recharts").then(m => m.BarChart), { ssr: false });
-const Bar = dynamic(() => import("recharts").then(m => m.Bar), { ssr: false });
-const CartesianGrid = dynamic(() => import("recharts").then(m => m.CartesianGrid), { ssr: false });
-const LineChart = dynamic(() => import("recharts").then(m => m.LineChart), { ssr: false });
-const Line = dynamic(() => import("recharts").then(m => m.Line), { ssr: false });
-const Tooltip = dynamic(() => import("recharts").then(m => m.Tooltip), { ssr: false });
-const XAxis = dynamic(() => import("recharts").then(m => m.XAxis), { ssr: false });
-const YAxis = dynamic(() => import("recharts").then(m => m.YAxis), { ssr: false });
-
-// Framer motion phải chạy client
 import { motion, AnimatePresence } from "framer-motion";
-
-// Icons
 import {
   ChevronDown,
   ShieldCheck,
@@ -28,14 +12,20 @@ import {
   ThumbsUp,
   ThumbsDown,
   RefreshCcw,
-  Lock,
-  Send
+  Lock
 } from "lucide-react";
 
+// Load Recharts dynamic để tránh lỗi server-side rendering
+const BarChart = dynamic(() => import("recharts").then(m => m.BarChart), { ssr: false });
+const Bar = dynamic(() => import("recharts").then(m => m.Bar), { ssr: false });
+const CartesianGrid = dynamic(() => import("recharts").then(m => m.CartesianGrid), { ssr: false });
+const LineChart = dynamic(() => import("recharts").then(m => m.LineChart), { ssr: false });
+const Line = dynamic(() => import("recharts").then(m => m.Line), { ssr: false });
+const Tooltip = dynamic(() => import("recharts").then(m => m.Tooltip), { ssr: false });
+const XAxis = dynamic(() => import("recharts").then(m => m.XAxis), { ssr: false });
+const YAxis = dynamic(() => import("recharts").then(m => m.YAxis), { ssr: false });
 
-// ======================================================================================
-// TYPES
-// ======================================================================================
+// --- TYPES ---
 interface FAQItemType {
   question: string;
   answer: string;
@@ -61,9 +51,7 @@ interface FAQItemProps {
   faq: FAQItemType;
 }
 
-// ======================================================================================
-// Escape HTML (security-safe)
-// ======================================================================================
+// --- UTILS ---
 const escapeHtml = (str: string): string =>
   str
     .replace(/&/g, "&amp;")
@@ -72,41 +60,28 @@ const escapeHtml = (str: string): string =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 
-// ======================================================================================
-// Highlight Text
-// ======================================================================================
 const highlightText = (text: string, keyword: string): string => {
   if (!keyword.trim()) return escapeHtml(text);
-
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const regex = new RegExp(`(${escaped})`, "gi");
-
   return escapeHtml(text).replace(
     regex,
     `<mark class="bg-yellow-300 text-black px-1">$1</mark>`
   );
 };
 
-// ======================================================================================
-// AI Similarity Score
-// ======================================================================================
 const getSimilarityScore = (query: string, target: string): number => {
   const q = query.toLowerCase();
   const t = target.toLowerCase();
-
   if (!q) return 0;
   if (t.includes(q)) return q.length * 5;
-
   let score = 0;
   for (let c of q) if (t.includes(c)) score++;
   if (t.startsWith(q)) score += 4;
-
   return score;
 };
 
-// ======================================================================================
-// FAQ ITEM (component)
-// ======================================================================================
+// --- SUB COMPONENT ---
 function FAQItem({
   index,
   activeIndex,
@@ -129,11 +104,10 @@ function FAQItem({
         <div className="flex items-center gap-3">
           {icon}
           <span
-            className="font-semibold"
+            className="font-semibold text-left"
             dangerouslySetInnerHTML={{ __html: highlightText(question, keyword) }}
           />
         </div>
-
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.3 }}>
           <ChevronDown className="w-5 h-5 text-indigo-500" />
         </motion.div>
@@ -150,17 +124,14 @@ function FAQItem({
             <div
               dangerouslySetInnerHTML={{ __html: highlightText(answer, keyword) }}
             />
-
             <div className="mt-4 flex gap-4 text-sm text-gray-600">
               <span>Was this helpful?</span>
-
               <button
                 onClick={() => onHelpful(faq, true)}
                 className="p-2 border rounded-lg hover:bg-green-100"
               >
                 <ThumbsUp className="w-4 h-4 text-green-600" />
               </button>
-
               <button
                 onClick={() => onHelpful(faq, false)}
                 className="p-2 border rounded-lg hover:bg-red-100"
@@ -175,9 +146,7 @@ function FAQItem({
   );
 }
 
-// ======================================================================================
-// FAQ DATA
-// ======================================================================================
+// --- DATA ---
 const faqdata: FAQItemType[] = [
   {
     question: "Is this service completely free to use?",
@@ -250,11 +219,8 @@ const faqdata: FAQItemType[] = [
   },
 ];
 
-
-// ======================================================================================
-// MAIN COMPONENT
-// ======================================================================================
-export default function FaqAnalyticsDashboard() {
+// --- MAIN COMPONENT (RENAMED TO Faq) ---
+export default function Faq() {
   const [keyword, setKeyword] = useState<string>("");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [data, setData] = useState<FAQItemType[]>(faqdata);
@@ -262,13 +228,11 @@ export default function FaqAnalyticsDashboard() {
 
   useEffect(() => {
     if (!keyword) return setSuggestions([]);
-
     const ranked = data
       .map((item) => ({ ...item, score: getSimilarityScore(keyword, item.question) }))
       .filter((x) => x.score! > 0)
       .sort((a, b) => b.score! - a.score!)
       .slice(0, 5);
-
     setSuggestions(ranked);
   }, [keyword, data]);
 
@@ -297,10 +261,9 @@ export default function FaqAnalyticsDashboard() {
             placeholder="Search FAQ..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="pl-10 pr-3 py-3 border rounded-xl w-full"
+            className="pl-10 pr-3 py-3 border rounded-xl w-full text-black"
           />
         </div>
-
         {keyword && (
           <button onClick={() => setKeyword("")}>
             <XCircle className="w-6 h-6 text-gray-500 hover:text-red-500" />
@@ -327,8 +290,7 @@ export default function FaqAnalyticsDashboard() {
       {/* Suggestions */}
       {suggestions.length > 0 && (
         <div className="mt-10 p-6 border rounded-xl bg-purple-50">
-          <h2 className="font-bold mb-3">AI Suggested Questions</h2>
-
+          <h2 className="font-bold mb-3 text-black">AI Suggested Questions</h2>
           {suggestions.map((s, i) => (
             <div key={i} className="py-2 text-purple-700">
               • {s.question}
@@ -338,24 +300,25 @@ export default function FaqAnalyticsDashboard() {
       )}
 
       {/* Charts */}
-      <div className="mt-16">
-        <h2 className="text-2xl font-bold mb-6">FAQ Analytics</h2>
+      <div className="mt-16 overflow-x-auto">
+        <h2 className="text-2xl font-bold mb-6 text-black">FAQ Analytics</h2>
+        <div className="flex flex-col gap-10">
+            <BarChart width={600} height={250} data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="question" tick={false} />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="views" fill="#8884d8" />
+            </BarChart>
 
-        <BarChart width={600} height={250} data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="question" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="views" />
-        </BarChart>
-
-        <LineChart width={600} height={250} data={data} className="mt-10">
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="question" />
-          <YAxis />
-          <Tooltip />
-          <Line type="monotone" dataKey="helpfulYes" />
-        </LineChart>
+            <LineChart width={600} height={250} data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="question" tick={false} />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey="helpfulYes" stroke="#82ca9d" />
+            </LineChart>
+        </div>
       </div>
     </div>
   );

@@ -297,7 +297,7 @@ export const Hero = () => {
                          {report.description ? (
                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-sm text-gray-700 leading-relaxed">
                                 <span className="font-bold text-gray-900 block text-xs uppercase mb-1">Nội dung báo cáo:</span>
-                                "{report.description}"
+                                {"{report.description}"}
                             </div>
                          ) : (
                             <p className="text-xs text-gray-400 italic bg-gray-50 p-2 rounded">
