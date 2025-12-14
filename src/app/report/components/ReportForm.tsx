@@ -175,7 +175,7 @@ export default function ReportForm() {
             <option value="">Chọn loại hình</option>
             <option value="fake_shopping">Trang web mua sắm giả mạo</option>
             <option value="phishing">Cuộc gọi / SMS lừa đảo (Phishing)</option>
-            <option value="investment">Lừa đảo đầu tư / Tiền ảo</option>
+            <option value="investment">Lừa đảo đầu tư / Tiền Chuyển khoản</option>
             <option value="romance">Lừa đảo tình cảm</option>
             <option value="other">Khác</option>
           </select>

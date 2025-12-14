@@ -3,16 +3,9 @@
 import { useState } from "react";
 import { 
   Shield, AlertTriangle, CheckCircle, Loader2, Info, 
-  Globe, Smartphone, Signal, Clock, DollarSign, Tag, 
-  X, MessageSquare, User, ThumbsDown 
+  Signal, Clock, DollarSign, Tag, 
+  X, MessageSquare, User, ThumbsDown, Calendar
 } from 'lucide-react'; 
-
-// --- CẤU HÌNH NGƯỜI DÙNG GIẢ LẬP (ĐỂ TEST) ---
-const CURRENT_USER = {
-  isLoggedIn: true, 
-  name: "Dev Nguyen",
-  avatar: null 
-};
 
 const Container = ({ className, children }: { className?: string; children: React.ReactNode }) => (
   <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${className || ''}`}>
@@ -20,13 +13,13 @@ const Container = ({ className, children }: { className?: string; children: Reac
   </div>
 );
 
-// --- INTERFACES ---
+// --- INTERFACES ĐÃ CẬP NHẬT ĐỂ KHỚP VỚI API ---
 interface UserReport {
-  id: number;
-  user: string;
-  date: string;
-  content: string;
-  tags: string[];
+  id: string; // UUID từ DB
+  created_at: string;
+  description: string | null; // TRƯỜNG QUAN TRỌNG
+  report_type: string;
+  status: string;
 }
 
 interface AssessmentResult {
@@ -45,7 +38,7 @@ interface AssessmentResult {
     lineType?: string;
   };
   recommendations: string[];
-  userReports?: UserReport[];
+  userReports?: UserReport[]; // Mảng báo cáo
 }
 
 export const Hero = () => {
@@ -262,7 +255,7 @@ export const Hero = () => {
             </div>
 
             {/* Modal Body (Scrollable) */}
-            <div className="p-0 overflow-y-auto custom-scrollbar">
+            <div className="p-0 overflow-y-auto custom-scrollbar bg-gray-50/50">
               {(!result.userReports || result.userReports.length === 0) ? (
                 <div className="p-10 text-center flex flex-col items-center justify-center gap-3">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
@@ -272,40 +265,53 @@ export const Hero = () => {
                   <p className="text-sm text-gray-400">Hãy là người đầu tiên báo cáo nếu bạn thấy nghi ngờ.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
+                <div className="p-4 space-y-4">
                   {result.userReports.map((report) => (
-                    <div key={report.id} className="p-5 hover:bg-gray-50/50 transition-colors">
+                    <div key={report.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                       {/* HEADER CỦA MỖI REPORT */}
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                             <User className="w-5 h-5" />
                           </div>
                           <div>
-                            <span className="block text-sm font-bold text-gray-900">{report.user}</span>
-                            <span className="block text-xs text-gray-400">{report.date}</span>
+                            <span className="block text-sm font-bold text-gray-900">Người dùng ẩn danh</span>
+                            <div className="flex items-center gap-1 text-xs text-gray-400">
+                                <Calendar size={12} />
+                                <span>{new Date(report.created_at).toLocaleDateString('vi-VN')}</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100">
-                          <ThumbsDown className="w-3 h-3" /> Tố cáo
+                        
+                        <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded border uppercase ${
+                            report.status === 'confirmed' 
+                            ? 'bg-red-50 text-red-600 border-red-100' 
+                            : 'bg-yellow-50 text-yellow-600 border-yellow-100'
+                        }`}>
+                          <ThumbsDown className="w-3 h-3" /> {report.status === 'confirmed' ? 'Đã xác thực' : 'Tố cáo'}
                         </div>
                       </div>
                       
-                      {/* NỘI DUNG REPORT */}
-                      <p className="text-gray-700 text-sm leading-relaxed mb-3 mt-3">
-                        {report.content}
-                      </p>
+                      {/* --- PHẦN HIỂN THỊ DESCRIPTION --- */}
+                      <div className="mt-2 relative">
+                         {report.description ? (
+                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-sm text-gray-700 leading-relaxed">
+                                <span className="font-bold text-gray-900 block text-xs uppercase mb-1">Nội dung báo cáo:</span>
+                                "{report.description}"
+                            </div>
+                         ) : (
+                            <p className="text-xs text-gray-400 italic bg-gray-50 p-2 rounded">
+                                (Người dùng không để lại mô tả chi tiết)
+                            </p>
+                         )}
+                      </div>
 
-                      {/* TAGS */}
-                      {report.tags && report.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {report.tags.map((tag, i) => (
-                            <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] uppercase font-bold rounded">
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      {/* TAG (Report Type) */}
+                      <div className="mt-3 flex gap-2">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[10px] uppercase font-bold rounded">
+                           #{report.report_type}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -313,8 +319,8 @@ export const Hero = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl text-center">
-              <p className="text-xs text-gray-500">
+            <div className="p-4 border-t border-gray-100 bg-white rounded-b-2xl text-center">
+              <p className="text-xs text-gray-400">
                 Thông tin được tổng hợp từ cộng đồng và chỉ mang tính chất tham khảo.
               </p>
             </div>

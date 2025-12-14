@@ -1,9 +1,6 @@
 /**
  * Cyber Security Manual - Final English Version
- * This component displays interactive security scenarios using a modern,
- * dark-themed layout with a horizontal tab/scroll bar for navigation.
- * It includes TypeScript interfaces, 11 scenarios classified into 3 categories,
- * quiz logic, and support for embedding YouTube demonstration videos.
+ * Updated to match standard Tailwind Gray Dark Mode
  */
 "use client";
 import { useState, useMemo } from "react";
@@ -11,13 +8,13 @@ import { useState, useMemo } from "react";
 // --- 1. INTERFACE DEFINITION (TypeScript) ---
 interface Scenario {
   id: number;
-  shortTitle: string; // Used in navigation tabs
+  shortTitle: string;
   question: string;
   options: string[];
-  correct: number; // Index of the correct option (0, 1, or 2)
-  advice: string[]; // Detailed advice list
-  note: string; // Key takeaway/summary
-  videoUrl?: string; // Optional YouTube embed link
+  correct: number;
+  advice: string[];
+  note: string;
+  videoUrl?: string;
 }
 
 interface Category {
@@ -26,7 +23,7 @@ interface Category {
   scenarios: Scenario[];
 }
 
-// --- 2. SCENARIO DATA (ENGLISH & Updated Content) ---
+// --- 2. SCENARIO DATA (ENGLISH) ---
 const categoriesData: Category[] = [
   {
     id: "social-web",
@@ -49,7 +46,7 @@ const categoriesData: Category[] = [
           "Only download apps from official stores (App Store, Google Play) and verify the developer's credibility.",
         ],
         note: "Never trust links shared solely for trending topics. Always verify the source.",
-        videoUrl: "https://www.youtube.com/embed/5D3oQp2h9L8", // General scam awareness
+        videoUrl: "https://www.youtube.com/embed/5D3oQp2h9L8",
       },
       {
         id: 102,
@@ -82,17 +79,17 @@ const categoriesData: Category[] = [
         correct: 2,
         advice: [
           "Investment platforms promising unrealistic returns (e.g., 30% monthly) are almost always Ponzi schemes or fraud.",
-          "Check the company's legal status and licensing with relevant government agencies (like the State Securities Commission in Vietnam).",
+          "Check the company's legal status and licensing with relevant government agencies.",
           "Never invest funds in applications or websites advertised only via social media without independent verification.",
         ],
         note: "If an investment seems too good to be true, it is fraudulent.",
-        videoUrl: "https://www.youtube.com/embed/K9ZlHh3T7sQ", // Investment scam
+        videoUrl: "https://www.youtube.com/embed/K9ZlHh3T7sQ",
       },
     ],
   },
   {
     id: "phone-email",
-    title: "Phone & Email Scams (Vishing/Phishing)",
+    title: "Phone & Email Scams",
     scenarios: [
       {
         id: 201,
@@ -108,10 +105,10 @@ const categoriesData: Category[] = [
         advice: [
           "Police or law enforcement agencies never conduct investigations or demand money/personal data over the phone.",
           "Real officers will contact you directly at your residence or workplace via official written summons.",
-          "Never install third-party applications (especially those granting remote access) based on instructions from unverified callers.",
+          "Never install third-party applications based on instructions from unverified callers.",
         ],
         note: "Hang up immediately. Scammers use fear and urgency to control victims.",
-        videoUrl: "https://www.youtube.com/embed/c-Xh9r1D6T8", // Police/Authority scam (VTV24)
+        videoUrl: "https://www.youtube.com/embed/c-Xh9r1D6T8",
       },
       {
         id: 202,
@@ -127,7 +124,7 @@ const categoriesData: Category[] = [
         advice: [
           "Legitimate businesses do not call customers asking for sensitive information like ID numbers for simple promotions.",
           "Always be suspicious of unsolicited calls about prizes, especially when they require personal data.",
-          "Use officially published contact methods (official website, verified social media) to confirm the promotion's authenticity.",
+          "Use officially published contact methods to confirm the promotion's authenticity.",
         ],
         note: "Do not provide sensitive data to unverified callers.",
       },
@@ -139,12 +136,12 @@ const categoriesData: Category[] = [
         options: [
           "Immediately fill out the form and transfer the fee to secure the scholarship spot.",
           "Call the phone number in the email immediately for confirmation.",
-          "Do not provide information or transfer money. Contact the university directly using their official, known contact information to verify.",
+          "Do not provide information or transfer money. Contact the university directly using their official contact information to verify.",
         ],
         correct: 2,
         advice: [
           "Real educational institutions rarely impose hidden or sudden 'processing fees' for scholarships.",
-          "Phishing emails often create a false sense of urgency (limited spots) to prevent critical thinking.",
+          "Phishing emails often create a false sense of urgency to prevent critical thinking.",
           "Look for grammatical errors, generic greetings, and suspicious sender email addresses.",
         ],
         note: "Never pay an upfront fee to claim a prize or scholarship.",
@@ -256,12 +253,11 @@ export default function SecurityManualPage() {
   const [selectedScenario, setSelectedScenario] = useState(categoriesData[0].scenarios[0]);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
 
-  // Recalculate all scenarios when data changes (though it's static here)
+  // Recalculate all scenarios when data changes
   const allScenarios = useMemo(() => {
     return categoriesData.flatMap(cat => cat.scenarios);
   }, []);
 
-  // Use the ID (number) to find the correct scenario across all categories
   const findScenarioById = (id: number) => {
     return allScenarios.find(s => s.id === id) || categoriesData[0].scenarios[0];
   };
@@ -269,14 +265,13 @@ export default function SecurityManualPage() {
   const handleScenarioSelect = (scenarioId: number) => {
     const scenario = findScenarioById(scenarioId);
     setSelectedScenario(scenario);
-    setSelectedAnswer(null); // Reset answer when a new scenario is selected
+    setSelectedAnswer(null); // Reset answer
   };
 
   const handleCategoryChange = (categoryId: string) => {
     const category = categoriesData.find(c => c.id === categoryId);
     if (category) {
       setActiveCategory(category);
-      // Automatically select the first scenario in the new category
       if (category.scenarios.length > 0) {
         handleScenarioSelect(category.scenarios[0].id);
       }
@@ -284,35 +279,28 @@ export default function SecurityManualPage() {
   };
 
   const handleAnswerChange = (index: number) => {
-    // Only allow selection if an answer hasn't been chosen yet
     if (selectedAnswer === null) {
       setSelectedAnswer(index);
     }
   };
 
-  // Determine if the currently selected scenario has a video
   const hasVideo = selectedScenario.videoUrl && selectedScenario.videoUrl.trim() !== "";
 
-  // The Index of the currently displayed scenario within its category
-  const currentScenarioIndex = activeCategory.scenarios.findIndex(s => s.id === selectedScenario.id);
-
-  // Determine the Title to show in the tab bar
-  const getTabTitle = (scenario: Scenario, index: number) => {
-    // Check if the scenario is one of the 5 questions from the docx (ID 1-10)
-    // The shortTitle will be the default, but we can override for numbered tabs if needed.
+  const getTabTitle = (scenario: Scenario) => {
     return `${scenario.shortTitle}`;
   };
 
   return (
-    <div className="min-h-screen bg-[#111827] text-white font-inter">
+    // Changed bg-[#0f172a] to bg-gray-900 to match standard theme
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-inter transition-colors duration-200">
       <div className="container mx-auto max-w-7xl px-4 py-8">
         
-        {/* --- CATEGORY TABS (SCROLLABLE BAR) --- */}
+        {/* --- CATEGORY TABS --- */}
         <div className="mb-4">
-          <h1 className="text-3xl font-extrabold text-white mb-6 pt-4 border-b border-gray-700 pb-2">
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-6 pt-4 border-b border-gray-300 dark:border-gray-700 pb-2">
             Interactive Cyber Security Manual
           </h1>
-          <div className="flex flex-col md:flex-row gap-4 border-b border-gray-700 pb-4">
+          <div className="flex flex-col md:flex-row gap-4 border-b border-gray-300 dark:border-gray-700 pb-4">
             {categoriesData.map(cat => (
               <button
                 key={cat.id}
@@ -320,7 +308,7 @@ export default function SecurityManualPage() {
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
                   activeCategory.id === cat.id
                     ? "bg-indigo-600 text-white shadow-lg"
-                    : "text-gray-400 hover:bg-gray-700 hover:text-white"
+                    : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
                 }`}
               >
                 {cat.title}
@@ -329,29 +317,30 @@ export default function SecurityManualPage() {
           </div>
         </div>
 
-        {/* --- SCENARIO TABS (Horizontal Scroll Navigation) --- */}
+        {/* --- SCENARIO TABS --- */}
         <div className="mb-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
           <div className="inline-flex space-x-2 pb-2">
-            {activeCategory.scenarios.map((scenario, index) => (
+            {activeCategory.scenarios.map((scenario) => (
               <button
                 key={scenario.id}
                 onClick={() => handleScenarioSelect(scenario.id)}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 flex-shrink-0 ${
                   selectedScenario.id === scenario.id
                     ? "bg-indigo-700 text-white shadow-xl"
-                    : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                    : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
                 }`}
               >
-                {getTabTitle(scenario, index)}
+                {getTabTitle(scenario)}
               </button>
             ))}
           </div>
         </div>
 
-        {/* --- SCENARIO CONTENT AREA (Matches Image Look) --- */}
-        <div className="bg-[#1f2937] rounded-xl shadow-2xl p-6 lg:p-8">
+        {/* --- SCENARIO CONTENT AREA --- */}
+        {/* Changed bg-[#1e293b] to bg-gray-800 */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 lg:p-8 transition-colors duration-200">
           
-          <h2 className="text-2xl font-bold text-indigo-400 mb-6 border-b border-gray-600 pb-3">
+          <h2 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-6 border-b border-gray-300 dark:border-gray-700 pb-3">
             {selectedScenario.shortTitle}: {selectedScenario.question}
           </h2>
 
@@ -359,13 +348,13 @@ export default function SecurityManualPage() {
             
             {/* --- LEFT COLUMN: QUESTION & OPTIONS --- */}
             <div className="lg:col-span-2">
-              <p className="text-lg font-medium text-gray-300 mb-6">
+              <p className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-6">
                 Scenario: {selectedScenario.question}
               </p>
 
               {/* ANSWER OPTIONS */}
               <div className="space-y-4 mb-8">
-                <h3 className="text-xl font-semibold text-gray-200 mb-3 border-b border-gray-700 pb-2">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-3 border-b border-gray-300 dark:border-gray-700 pb-2">
                   What is your safest action?
                 </h3>
                 {selectedScenario.options.map((option, index) => {
@@ -373,17 +362,17 @@ export default function SecurityManualPage() {
                   const isCorrect = selectedScenario.correct === index;
                   const isAnswered = selectedAnswer !== null;
 
-                  let colorClass = "bg-gray-700 hover:bg-gray-600";
+                  let colorClass = "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 border-gray-200 dark:border-gray-600";
                   if (isAnswered) {
                     if (isCorrect) {
-                      colorClass = "bg-green-700 border-green-400"; // Correct answer (Green border/background)
+                      colorClass = "bg-green-100 dark:bg-green-900/40 border-green-500 dark:border-green-500";
                     } else if (isSelected && !isCorrect) {
-                      colorClass = "bg-red-700 border-red-400"; // Incorrect selection (Red border/background)
+                      colorClass = "bg-red-100 dark:bg-red-900/40 border-red-500 dark:border-red-500";
                     } else {
-                      colorClass = "bg-gray-700 opacity-50"; // Unselected wrong answer (Fade out)
+                      colorClass = "bg-gray-100 dark:bg-gray-700 opacity-50 border-gray-200 dark:border-gray-600";
                     }
                   } else if (isSelected) {
-                    colorClass = "bg-indigo-600 hover:bg-indigo-500";
+                    colorClass = "bg-indigo-100 dark:bg-indigo-900/40 hover:bg-indigo-200 dark:hover:bg-indigo-800 border-indigo-500";
                   }
 
                   return (
@@ -393,10 +382,10 @@ export default function SecurityManualPage() {
                       disabled={isAnswered}
                       className={`w-full text-left p-4 rounded-lg shadow-md transition-all duration-300 border-2 ${colorClass}`}
                     >
-                      <span className="font-semibold">{index + 1}. </span>
-                      <span className="text-gray-100">{option}</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{index + 1}. </span>
+                      <span className="text-gray-800 dark:text-gray-200">{option}</span>
                       {isAnswered && isCorrect && (
-                        <span className="ml-3 text-green-200 font-bold"> (Correct Answer)</span>
+                        <span className="ml-3 text-green-700 dark:text-green-400 font-bold"> (Correct Answer)</span>
                       )}
                     </button>
                   );
@@ -405,17 +394,18 @@ export default function SecurityManualPage() {
 
               {/* FEEDBACK & TIPS */}
               {selectedAnswer !== null && (
-                <div className="mt-8 pt-6 border-t border-gray-600">
+                <div className="mt-8 pt-6 border-t border-gray-300 dark:border-gray-700">
                   <h3 className="text-2xl font-bold mb-4">
                     {selectedAnswer === selectedScenario.correct
-                      ? <span className="text-green-400">✅ Correct Action!</span>
-                      : <span className="text-red-400">❌ Incorrect Action.</span>}
+                      ? <span className="text-green-600 dark:text-green-400">✅ Correct Action!</span>
+                      : <span className="text-red-600 dark:text-red-400">❌ Incorrect Action.</span>}
                   </h3>
                   
                   {/* ADVICE */}
-                  <div className="mb-6 p-4 bg-gray-800 rounded-lg">
-                    <h4 className="text-lg font-semibold text-indigo-400 mb-2">Safety Advice:</h4>
-                    <ul className="list-disc list-inside space-y-2 text-gray-300">
+                  {/* Changed dark:bg-gray-800 to dark:bg-gray-700 for better contrast inside the card */}
+                  <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                    <h4 className="text-lg font-semibold text-indigo-600 dark:text-indigo-300 mb-2">Safety Advice:</h4>
+                    <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
                       {selectedScenario.advice.map((tip, index) => (
                         <li key={index}>{tip}</li>
                       ))}
@@ -423,9 +413,9 @@ export default function SecurityManualPage() {
                   </div>
 
                   {/* KEY TAKEAWAY */}
-                  <div className="p-4 bg-yellow-900 border-l-4 border-yellow-400 text-yellow-100 rounded-md">
-                    <p className="font-bold text-yellow-50">Key Takeaway:</p>
-                    <p className="text-sm">{selectedScenario.note}</p>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-500 dark:border-yellow-500 text-yellow-900 dark:text-yellow-100 rounded-md">
+                    <p className="font-bold text-yellow-900 dark:text-yellow-200">Key Takeaway:</p>
+                    <p className="text-sm text-yellow-800 dark:text-yellow-100">{selectedScenario.note}</p>
                   </div>
                 </div>
               )}
@@ -433,12 +423,11 @@ export default function SecurityManualPage() {
 
             {/* --- RIGHT COLUMN: VIDEO/INFO --- */}
             <div className="lg:col-span-1">
-              <h3 className="text-xl font-bold text-gray-200 mb-4 border-b border-gray-700 pb-2">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4 border-b border-gray-300 dark:border-gray-700 pb-2">
                 Illustration & Context
               </h3>
               {hasVideo ? (
                 <div className="aspect-w-16 aspect-h-9 w-full rounded-lg overflow-hidden shadow-xl">
-                  {/* Responsive Iframe for YouTube embed */}
                   <iframe
                     className="w-full h-full"
                     src={selectedScenario.videoUrl}
@@ -449,7 +438,7 @@ export default function SecurityManualPage() {
                   ></iframe>
                 </div>
               ) : (
-                <div className="p-6 bg-gray-700 rounded-lg text-gray-400 h-64 flex items-center justify-center">
+                <div className="p-6 bg-gray-200 dark:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300 h-64 flex items-center justify-center">
                   <p className="text-center">No video illustration available for this scenario. Always practice caution!</p>
                 </div>
               )}
@@ -457,27 +446,6 @@ export default function SecurityManualPage() {
           </div>
         </div>
       </div>
-      
-      {/* --- FOOTER (CONTACT INFO) --- */}
-      <footer className="bg-[#1f2937] mt-12 py-8 border-t border-gray-700">
-        <div className="container mx-auto max-w-7xl px-4 text-center">
-          <h4 className="text-lg font-semibold text-indigo-400 mb-4">Contact For Assistance</h4>
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
-            <p>
-              <span className="font-medium text-gray-200">Phone:</span> (84) 123 456 789
-            </p>
-            <p>
-              <span className="font-medium text-gray-200">Email:</span> security.support@example.com
-            </p>
-            <p>
-              <span className="font-medium text-gray-200">Address:</span> 123 Cyber Street, Hanoi, Vietnam
-            </p>
-          </div>
-          <p className="mt-8 text-sm text-gray-500">
-            © 2025 Cyber Safety Initiative. All rights reserved.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
