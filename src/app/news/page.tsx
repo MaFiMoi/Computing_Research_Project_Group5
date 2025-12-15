@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export const articlesData = [
+const articlesData = [
   {
     slug: "canh-bao-lua-dao-giao-hang-gia-mao",
     title: "Cách nhận biết trang web lừa đảo",

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+// Thêm useCallback vào import
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabaseClient"; // Đảm bảo đường dẫn đúng
+import { createClient } from "@/lib/supabaseClient";
 import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function LoginPage() {
@@ -26,9 +27,9 @@ export default function LoginPage() {
   const [factorId, setFactorId] = useState("");
 
   // --- HÀM 1: Kiểm tra Role và Chuyển hướng (Dùng chung) ---
-  const checkRoleAndRedirect = async (userId: string) => {
+  // SỬA: Dùng useCallback để ổn định hàm này
+  const checkRoleAndRedirect = useCallback(async (userId: string) => {
     try {
-      // Lấy role từ bảng profiles (hoặc bảng user_roles tùy DB của bạn)
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("role")
@@ -46,20 +47,27 @@ export default function LoginPage() {
       } else {
         router.push("/");
       }
-      router.refresh(); // Refresh để cập nhật session state trên server components
+      router.refresh(); 
     } catch (err) {
       console.error(err);
       router.push("/");
     }
-  };
+  }, [router, supabase]); // Dependencies của checkRoleAndRedirect
 
   // --- HÀM 2: Xử lý Đăng nhập (Bước 1: Captcha + Pass) ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Validate mật khẩu: Chữ cái đầu viết hoa + ít nhất 8 ký tự
+    const passwordRegex = /^[A-Z].{7,}$/;
+    if (!passwordRegex.test(password)) {
+        setError("Mật khẩu phải có ít nhất 8 ký tự và chữ cái đầu viết hoa.");
+        return;
+    }
+
     setIsLoading(true);
 
-    // 1. Kiểm tra Captcha Client-side
     if (!captchaToken) {
       setError("Vui lòng xác nhận bạn không phải là người máy.");
       setIsLoading(false);
@@ -67,7 +75,6 @@ export default function LoginPage() {
     }
 
     try {
-      // 2. Gọi API Verify Captcha (Server-side)
       const verifyRes = await fetch('/api/verify-turnstile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,11 +85,10 @@ export default function LoginPage() {
       if (!verifyData.success) {
         setError("Captcha không hợp lệ. Vui lòng thử lại.");
         setIsLoading(false);
-        setCaptchaToken(""); // Reset để user bấm lại
+        setCaptchaToken(""); 
         return;
       }
 
-      // 3. Đăng nhập Supabase
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -90,7 +96,7 @@ export default function LoginPage() {
 
       if (signInError) {
         setIsLoading(false);
-        setCaptchaToken(""); // Reset captcha khi sai pass
+        setCaptchaToken(""); 
         if (signInError.message.includes("Invalid login credentials")) {
           setError("Email hoặc mật khẩu không đúng.");
         } else if (signInError.message.includes("Email not confirmed")) {
@@ -107,26 +113,22 @@ export default function LoginPage() {
         return;
       }
 
-      // 4. Kiểm tra xem User có bật MFA không
-      // getAuthenticatorAssuranceLevel giúp xem user có thể lên mức aal2 không
       const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       
       if (aalError) throw aalError;
 
       if (aalData && aalData.nextLevel === 'aal2') {
-        // User có cài MFA -> Tìm factor ID để xác thực
         const { data: factors } = await supabase.auth.mfa.listFactors();
         const totpFactor = factors?.totp.find(f => f.status === 'verified');
 
         if (totpFactor) {
           setFactorId(totpFactor.id);
-          setStep('MFA'); // Chuyển sang giao diện nhập mã
-          setIsLoading(false); // Dừng loading để user nhập
+          setStep('MFA'); 
+          setIsLoading(false); 
           return;
         }
       }
 
-      // 5. Nếu không có MFA -> Chuyển hướng luôn
       await checkRoleAndRedirect(data.user.id);
 
     } catch (err: any) {
@@ -138,7 +140,8 @@ export default function LoginPage() {
   };
 
   // --- HÀM 3: Xử lý MFA (Bước 2: Verify code) ---
-  const verifyMfa = async (code: string) => {
+  // SỬA: Dùng useCallback để hàm này có thể đưa vào useEffect an toàn
+  const verifyMfa = useCallback(async (code: string) => {
     setIsLoading(true);
     setError("");
 
@@ -156,25 +159,24 @@ export default function LoginPage() {
 
       if (verifyError) throw verifyError;
 
-      // Xác thực thành công -> Chuyển hướng
-      // verifyData.user chắc chắn tồn tại lúc này
       await checkRoleAndRedirect(verifyData.user.id);
 
     } catch (err: any) {
       setError("Mã xác thực không đúng.");
       setIsLoading(false);
-      setMfaCode(""); // Clear mã sai
+      setMfaCode(""); 
     }
-  };
+  }, [factorId, supabase, checkRoleAndRedirect]); // Dependencies của verifyMfa
 
   // --- EFFECT: Tự động submit khi đủ 6 số ---
+  // SỬA: Đã thêm đầy đủ dependencies
   useEffect(() => {
     if (step === 'MFA' && mfaCode.length === 6) {
       verifyMfa(mfaCode);
     }
-  }, [mfaCode]);
+  }, [step, mfaCode, verifyMfa]);
 
-  // --- HÀM 4: Đăng nhập Google (Placeholder) ---
+  // --- HÀM 4: Đăng nhập Google ---
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -188,7 +190,6 @@ export default function LoginPage() {
     <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 px-4">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-md dark:bg-gray-800">
         
-        {/* Tiêu đề */}
         <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-2">
           {step === 'LOGIN' ? 'Đăng nhập' : 'Xác thực 2 bước'}
         </h1>
@@ -196,7 +197,6 @@ export default function LoginPage() {
           {step === 'LOGIN' ? 'Chào mừng bạn quay trở lại' : 'Nhập mã từ ứng dụng Google Authenticator'}
         </p>
         
-        {/* Thông báo lỗi */}
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm text-center">
             {error}
@@ -224,7 +224,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Turnstile Widget */}
             <div className="flex justify-center min-h-[65px]">
               <Turnstile
                 siteKey={SITE_KEY}
@@ -286,7 +285,7 @@ export default function LoginPage() {
                 setStep('LOGIN');
                 setMfaCode("");
                 setPassword("");
-                setCaptchaToken(""); // Bắt buộc user làm lại captcha nếu quay lại
+                setCaptchaToken("");
               }}
               className="w-full text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >

@@ -29,7 +29,17 @@ export default function RegisterPage() {
     setError("");
     setIsLoading(true);
 
-    // --- Validate cơ bản ---
+    // --- Validate Mật khẩu (MỚI THÊM) ---
+    // Regex: Bắt đầu bằng chữ Hoa (^[A-Z]) và theo sau là ít nhất 7 ký tự nữa (.{7,})
+    const passwordRegex = /^[A-Z].{7,}$/;
+    
+    if (!passwordRegex.test(password)) {
+        setError("Mật khẩu phải có ít nhất 8 ký tự và chữ cái đầu viết hoa.");
+        setIsLoading(false);
+        return; 
+    }
+
+    // --- Validate khớp mật khẩu ---
     if (password !== confirmPassword) {
       setError("Mật khẩu nhập lại không khớp.");
       setIsLoading(false);
@@ -74,6 +84,7 @@ export default function RegisterPage() {
         if (signUpError.message.includes("User already registered")) {
           setError("Email này đã được sử dụng.");
         } else if (signUpError.message.includes("Password should be")) {
+          // Fallback nếu Supabase có policy riêng
           setError("Mật khẩu quá yếu. Vui lòng sử dụng ít nhất 6 ký tự.");
         } else {
           setError(signUpError.message);
